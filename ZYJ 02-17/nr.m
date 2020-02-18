@@ -10,7 +10,7 @@ classdef nr < handle
         N_fft = 2048                           % NR Tx basic FFT size    ddddd
         N_ofdm = 14                            % Number OFDM symbols in slot
         N_sf = 10                              % Number of subframes in frame
-        N_s_slot = nr.N_fft*(nr.N_ofdm+1)     % Samples per slot
+        N_s_slot = nr.N_fft*(nr.N_ofdm+1)      % Samples per slot
         N_s_cp_ofdm = [160, 144, 144, 144, 144, 144, 144]*(nr.N_fft/2048) % Cyclic prefix per ofdm symbol
     end
     

@@ -53,6 +53,7 @@ classdef gnb_tx < handle
                         symbolEnd = length(signalIn) - 1;                  % Zhang: In which situation that this case would happen? length(SignalInSymbols)>=0?
                     end
                     codewordIndex = mod(symbolIndex - 3,8);
+                    
                     signalInPrecoded(symbolStart + 1:symbolEnd + 1,:) = signalIn(symbolStart + 1:symbolEnd + 1)...
                                                                         * obj.trp_conf(TRPIndex).ArrayCodebook(:,codewordIndex + 1).';  
                 end

@@ -12,6 +12,8 @@ classdef environment < handle
         ue_pos      % 3D array with UE coordinates {x, y, z} or 'random'
         trpselect
         num_trp
+        nr
+        Fsamp
         trp         % Struct with TRP information
         UTs         % Struct with UE information
     end
@@ -19,27 +21,28 @@ classdef environment < handle
     methods 
         
         %% Environment constructor
-        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp)
+        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp , Fsamp)
             
-            if nargin == 7
+            if nargin == 8
                 obj.trp_pos = trp_pos;
                 obj.trp_bearing = trp_bearing;
                 obj.max_dim = max_dim;
                 obj.channel = channel;
                 obj.ue_pos = ue_pos;
                 obj.trpselect = trpselect;
-                obj.num_trp = num_trp; 
+                obj.num_trp = num_trp;
+                obj.Fsamp = Fsamp;
             else
                 error('Wrong number of arguments for environment creation.');
             end
-            
+
             % Drop UE and store the info into Pos.UTs
             dropUE(obj);                
              %figRoom = obj.plotRoom(obj.trp,obj.UTs,1.0);
             
             % configure all the 12 gnbs
             obj.trp = dropTRPs(obj, trp_pos, trp_bearing, ...
-                obj.UTs.UTDirectionOfTravel, obj.UTs.Mobility,obj.UTs.ArrayPosition); 
+                obj.UTs.UTDirectionOfTravel, obj.UTs.Mobility,obj.UTs.ArrayPosition,obj.Fsamp); 
  
             % Select 6 closest TRPs...
             obj.trp = obj.selectClosestTRPs(obj.trp , obj.UTs , obj.num_trp , obj.trpselect);
@@ -89,8 +92,8 @@ classdef environment < handle
         end
             
         %% Method to place TRPs in geometry
-        function TRPs = dropTRPs(obj, TRPPositions, TRPBearings, UTDirectionOfTravel, Mobility, UTPosition)
-            
+        function TRPs = dropTRPs(obj, TRPPositions, TRPBearings, UTDirectionOfTravel, Mobility, UTPosition , Fsamp)
+
             % Codebook of beams equi-spaced in azimuth when using an array defined by
             % txArrayFR2.Size = [4 8 1 1 1]; % Given as [M N P Mg Ng].
             % txArrayFR2.ElementSpacing = [0.5 0.5 0.0 0.0]; % Given as [dV dH dgV dgH].
@@ -114,7 +117,7 @@ classdef environment < handle
                         30e9,...
                         30e9*Mobility/physconst('lightspeed'),...
                         UTDirectionOfTravel,...
-                        30.72e6,...                      %dddddddd???
+                        Fsamp,...                      %dddddddd???
                         30720,...                                          
                         norm(UTPosition-TRPPositions(:,positionIndex))/physconst('lightspeed'),...   % First Path Delay
                         (UTPosition-TRPPositions(:,positionIndex))/norm(UTPosition-TRPPositions(:,positionIndex)));  % TRP2UTDir 3X1 matrix
@@ -280,7 +283,7 @@ classdef environment < handle
                     TRPs = TRPs(I(1:numTRPs));
                 end
                 
-                case 'Manual'      % select the bearing first
+                case 'Manual'      % trp would be selected based on the distance first and then bearing
                 d = zeros(length(TRPs),1);
                 for TRPIndex = 1:length(TRPs)
                 

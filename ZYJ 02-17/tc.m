@@ -16,7 +16,7 @@ function tc = tc(index)
     t_g.description = 'Default parameters';
     
     % numerology (signal)
-    t_g.nr = nr(1);
+    t_g.nr = nr(2);
     t_g.slotNumber = randi(20,1)-1;
     
     % TRPs setting
@@ -30,11 +30,11 @@ function tc = tc(index)
     t_g.env_fix.max_dim = [120;50;3];                                      % The size of the office
     
     % UE setting
-    t_g.env_fix.ue_pos = 'fixed';                                          % UEs position mode: 'random' or 'fixed' 
-    t_g.env_fix.ue_nbr = 1;                                                % number of UEs to run
+    t_g.env_fix.ue_pos = 'random';                                          % UEs position mode: 'random' or 'fixed' 
+    t_g.env_fix.ue_nbr = 10;                                                % number of UEs to run
     
     % Channel setting
-    t_g.env_fix.ch = 'los';                                                % channel mode
+    t_g.env_fix.ch = 'cdl-d';                                                % channel mode
     
     % decoder setting
     t_g.ue_conf.combiner = 1;                                              %Zero forcing
@@ -62,8 +62,6 @@ function tc = tc(index)
             % Define NR with 15-kHz sub-carrier spacing numerology
             t.name = 'tc1';
             t.description = 'Indoor open office, DL OTDOA, FR1 - 3 GHz, 15kHz SCS';
-            t.nr = nr(1);
-            ue_nbr =10;
 
             otherwise
                 error('Expected test case not defined - abort')

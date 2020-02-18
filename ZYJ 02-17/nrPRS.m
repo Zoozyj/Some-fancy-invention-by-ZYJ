@@ -30,14 +30,14 @@ Ns = power(2,ceil(log2(12*MaxDLNumberRB)));                                %Zhan
 m = 0:2*PRSNumberRB-1;              
 mprim = m + MaxDLNumberRB - PRSNumberRB;
 signalOut = zeros(Ns,14);
-signalOutSymbols = zeros(14,1);
+signalOutSymbols = zeros(14,1);                                            % The first sample position of each symbol
 symbolNumberList = [3,4,5,6,7,8,9,10];    
 %symbolNumberList = [3,5,6,8,9,10,12,13];
 nuShift = mod(NPRSid,6); 
 for symbolNumber = symbolNumberList                               
     ell = mod(symbolNumber,7);                                           
     k = round(6*(m + Ns/12 - PRSNumberRB) + mod(6 - ell - nuShift,6));     % zhang: Ns/12=MaxDLNumberRB ?
-%    k = 6*(m + DLNumberRB - PRSNumberRB) + mod(6 - ell - nuShift,6);
+    %k = 6*(m + DLNumberRB - PRSNumberRB) + mod(6 - ell - nuShift,6);
     r = nrPRBS(slotNumber,symbolNumber,NPRSid,MaxDLNumberRB);           
     signalOut(k+1,symbolNumber+1) = r(mprim);
 end

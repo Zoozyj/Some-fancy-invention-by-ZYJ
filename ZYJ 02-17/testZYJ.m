@@ -21,6 +21,7 @@ Res = cell(1,6);      % Time, configuration, OTOA, corr_test, (x,y,z)matrix, Err
 % Buffer for ue_pos and est_pos
 ue_pos=nan(Con.env_fix.ue_nbr,3);
 est_coord=nan(Con.env_fix.ue_nbr,3);
+
 for ue_idx = 1:Con.env_fix.ue_nbr
     %ue_idx = 1;
     fprintf('%d\n',ue_idx); %Atlease something can show up during the boring waiting time 
@@ -28,7 +29,7 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     % constructor for Pos
     Pos = environment(Con.env_fix.trp_pos , Con.env_fix.trp_bearing,...
                       Con.env_fix.max_dim , Con.env_fix.ch, Con.env_fix.ue_pos,...
-                      Con.env_fix.trpselect , Con.env_fix.num_trp);
+                      Con.env_fix.trpselect , Con.env_fix.num_trp , Con.nr.Fsamp);
    
     % constructor for gnb ue ls object
     gnb_o = gnb_tx(Pos.trp, Con.nr);

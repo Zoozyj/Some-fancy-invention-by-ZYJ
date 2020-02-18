@@ -41,7 +41,7 @@ classdef ue < handle
             %The search grid is depend on the range of the secnario.
             Len_corr = obj.conf.searchGrid*2+1;
             searchGrid=obj.conf.searchGrid;    % 200   periodicity of the sequence in time domain
-            interp_fac=10;                      % interpolation factor
+            interp_fac=1;                      % interpolation factor
              
             % sf_t subframe in time indexed per symbol with removed CP
             num_cells = length(ref_sig(1,:));
@@ -130,11 +130,11 @@ classdef ue < handle
                     CorrFlag = isempty(firstCorrPos);
                     
                     if CorrFlag == 0
-                        TOA = (firstCorrPos(1)-floor((searchGrid*2+1)*interp_fac/2))/Fs/interp_fac; % dddddddd -1 here bcs in MATLAB all start from 1   Zhang: Fs here is wrong!
+                        TOA = (firstCorrPos(1)-floor((searchGrid*2)*interp_fac/2))/Fs/interp_fac; % dddddddd -1 here bcs in MATLAB all start from 1   Zhang: Fs here is wrong!
                         
                     else
                         firstCorrPos         = bb;
-                        TOA                    = (firstCorrPos(1)-floor((searchGrid*2)*interp_fac/2))/Fs/interp_fac;
+                        TOA                    = (firstCorrPos(1)-(searchGrid*2)*interp_fac/2)/Fs/interp_fac;
                     end
  
                     
