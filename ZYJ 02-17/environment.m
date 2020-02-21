@@ -14,8 +14,6 @@ classdef environment < handle
         num_trp
         nr
         Fsamp
-        trp         % Struct with TRP information
-        UTs         % Struct with UE information
     end
     
     methods 
@@ -35,54 +33,39 @@ classdef environment < handle
             else
                 error('Wrong number of arguments for environment creation.');
             end
-
+        end
+        
+        %% set environment 
+        function Pos=setenvironment(obj)
+            Pos=struct('Num',[],'UTs',[],'trp',[]);
+            
             % Drop UE and store the info into Pos.UTs
-            dropUE(obj);                
+            Pos.UTs=obj.dropUE;                
              %figRoom = obj.plotRoom(obj.trp,obj.UTs,1.0);
             
-            % configure all the 12 gnbs
-            obj.trp = dropTRPs(obj, trp_pos, trp_bearing, ...
-                obj.UTs.UTDirectionOfTravel, obj.UTs.Mobility,obj.UTs.ArrayPosition,obj.Fsamp); 
+            % configure all the 12 gnbs (36 trps)
+            Pos.trp = obj.dropTRPs( Pos.UTs.UTDirectionOfTravel, Pos.UTs.Mobility, Pos.UTs.ArrayPosition); 
  
             % Select 6 closest TRPs...
-            obj.trp = obj.selectClosestTRPs(obj.trp , obj.UTs , obj.num_trp , obj.trpselect);
+            Pos.trp = obj.selectClosestTRPs(Pos.trp , Pos.UTs);
             
             % ...and reassign CellIDs.
-            for TRPIndex = 1:length(obj.trp)
-                obj.trp(TRPIndex).CellID = mod(TRPIndex-1,6);
+            for TRPIndex = 1:length(Pos.trp)
+                Pos.trp(TRPIndex).CellID = mod(TRPIndex-1,6);
             end
-            
-            % obj.plotRoom(obj.trp,obj.UTs,3.0,figRoom,{'1';'2';'3';'4';'5';'6'});
            
         end
         
-        %% Method to apply the configured channel
-        function sig_o = apply_ch(obj, sig_i, trp_idx)
-            
-            [signalOut,pathGains,sampleTimes] = nrCDLChannel(sig_i, obj.trp(trp_idx).Channel);
-            
-            %figure; plot(real(sig_i)); hold on; plot(real(signalOut(:,1))); axis tight; grid on;
-            %figure; plot(imag(sig_i)); hold on; plot(imag(signalOut(:,1))); axis tight; grid on;
-            d2D = norm(obj.trp(trp_idx).ArrayPosition(1:2) - obj.UTs.ArrayPosition(1:2));     %7.4.1
-            hBS = obj.trp(trp_idx).ArrayPosition(3);
-            hUT = obj.UTs.ArrayPosition(3);
-            [PL,sigmaSF] = nrPathloss('InH',obj.trp(trp_idx).Channel.HasLOSCluster,d2D,hBS,hUT,obj.trp(trp_idx).Channel.CarrierFrequency);
-            PL = PL + randn(1)*sigmaSF;
-            sig_o = signalOut/sqrt(power(10,PL/10));
-            
-        end
-
-        
-        %% Method to place new UE
-        function dropUE(obj)            
+        %% Method to place new UE "2"
+        function UTs=dropUE(obj)            
                   
              switch obj.ue_pos 
                  case 'random'
-                 obj.UTs = struct('ArrayPosition',[rand(1)*obj.max_dim(1); rand(1)*obj.max_dim(2); 1.5],...
+                 UTs = struct('ArrayPosition',[rand(1)*obj.max_dim(1); rand(1)*obj.max_dim(2); 1.5],...
                              'UTDirectionOfTravel',[rand(1)*360 - 180;0],...
                              'Mobility',3000/3600);
                  case 'fixed'
-                 obj.UTs = struct('ArrayPosition',[60; 25; 1.5],...
+                 UTs = struct('ArrayPosition',[60; 25; 1.5],...
                              'UTDirectionOfTravel',[rand(1)*360 - 180;0],...
                              'Mobility',3000/3600);
                  otherwise
@@ -90,10 +73,12 @@ classdef environment < handle
              end   
              
         end
-            
-        %% Method to place TRPs in geometry
-        function TRPs = dropTRPs(obj, TRPPositions, TRPBearings, UTDirectionOfTravel, Mobility, UTPosition , Fsamp)
-
+        
+        %% Method to place TRPs in geometry "2"
+        function TRPs = dropTRPs(obj, UTDirectionOfTravel, Mobility, UTPosition)
+            TRPPositions=obj.trp_pos;
+            TRPBearings=obj.trp_bearing;
+   
             % Codebook of beams equi-spaced in azimuth when using an array defined by
             % txArrayFR2.Size = [4 8 1 1 1]; % Given as [M N P Mg Ng].
             % txArrayFR2.ElementSpacing = [0.5 0.5 0.0 0.0]; % Given as [dV dH dgV dgH].
@@ -117,7 +102,7 @@ classdef environment < handle
                         30e9,...
                         30e9*Mobility/physconst('lightspeed'),...
                         UTDirectionOfTravel,...
-                        Fsamp,...                      %dddddddd???
+                        obj.Fsamp,...                      %dddddddd???
                         30720,...                                          
                         norm(UTPosition-TRPPositions(:,positionIndex))/physconst('lightspeed'),...   % First Path Delay
                         (UTPosition-TRPPositions(:,positionIndex))/norm(UTPosition-TRPPositions(:,positionIndex)));  % TRP2UTDir 3X1 matrix
@@ -136,7 +121,7 @@ classdef environment < handle
             numTRP = length(TRPs); 
         end
         
-        %% Method to get a default channel out from the channel model with some basic settings
+        %% Method to get a default channel out from the channel model with some basic settings "3"
         function channel = getDefaultChannel(obj, TransmitAntennaArrayOrientation,DelayProfile,CarrierFrequency,MaximumDopplerShift,UTDirectionOfTravel,SampleRate,NumTimeSamples,FirstPathDelay,TRP2UTDir)
             % The following parameters might need to be changed by the function call:
             % DelaySpread.
@@ -208,111 +193,73 @@ classdef environment < handle
             channel.FirstPathAngleAoD = angleAoDGCS; % In degrees. OBS
             channel.FirstPathAngleZoA = angleZoAGCS; % In degrees. OBS
             channel.FirstPathAngleZoD = angleZoDGCS; % In degrees. OBS
-        end
+        end 
         
-        %% Method to plot the geometries and with placed TRPs and UTs
-        function fig = plotRoom(obj, TRPs,UTs,lineWidth,fig_num)
-            if (nargin < 3)
-                lineWidth = 1.0;
-            end
-            if (nargin < 4)
-                fig = figure;
-            else
-                figure(fig_num);
-                hold on;
-            end
-            clf(fig_num);
-            R = 3;
-            hold on;
-            line([0 120 120 0 0],[0 0 50 50 0]);                           %sketch the wall of the office
-            for TRPIndex = 1:length(TRPs)
-                plot(TRPs(TRPIndex).ArrayPosition(1),TRPs(TRPIndex).ArrayPosition(2),'bo','LineWidth',lineWidth);
-                h = line(TRPs(TRPIndex).ArrayPosition(1)+1.5*R*[0,cos(deg2rad(TRPs(TRPIndex).ArrayBearing+90))],TRPs(TRPIndex).ArrayPosition(2)+1.5*R*[0,sin(deg2rad(TRPs(TRPIndex).ArrayBearing+90 ))]);
-                set(h,'Color','r');
-                set(h,'LineWidth',lineWidth);
-                phiGCS = 37.5 + 15*(7:-1:0);
-                if (lineWidth>1)
-                    for AngleIdx = 1:length(phiGCS)
-                        hold on;
-                        h = line(TRPs(TRPIndex).ArrayPosition(1) + R*[0,cos(deg2rad(TRPs(TRPIndex).ArrayBearing + phiGCS(AngleIdx)))],TRPs(TRPIndex).ArrayPosition(2)+R*[0,sin(deg2rad(TRPs(TRPIndex).ArrayBearing + phiGCS(AngleIdx)))]);
-                        set(h,'Color','k');
-                        set(h,'LineWidth',lineWidth/2);
-                    end
-                end
-                if (nargin>3)
-                    text(TRPs(TRPIndex).ArrayPosition(1)+2.5*R*cos(deg2rad(TRPs(TRPIndex).ArrayBearing+90)),...
-                         TRPs(TRPIndex).ArrayPosition(2)+2.5*R*sin(deg2rad(TRPs(TRPIndex).ArrayBearing+90 )),...
-                         num2str(TRPIndex));    %test the number of the trps alongside them
-                    %text(TRPs(TRPIndex).ArrayPosition(1)+3,TRPs(TRPIndex).ArrayPosition(2),num2str(TRPIndex));
-                end
-            end
-            plot(UTs(1).ArrayPosition(1,:),UTs.ArrayPosition(2,:),'gx');
-            h = line(UTs.ArrayPosition(1)+R*[0,cos(deg2rad(UTs.UTDirectionOfTravel(1)))],UTs.ArrayPosition(2)+R*[0,sin(deg2rad(UTs.UTDirectionOfTravel(1)))]);
-            set(h,'Color','k');
-            set(h,'LineWidth',lineWidth);
-            axis equal;
-            grid on;
-        end
-        
-        %% Method to choose the closest by distance to one placed UT 
-        function TRPs = selectClosestTRPs(obj, TRPs,UTs,numTRPs,trpselect)
+        %% Method to choose the closest by distance to one placed UT "2"
+        function TRPs = selectClosestTRPs(obj, TRPs , UTs)
+            trpselect=obj.trpselect;
+            numTRPs=obj.num_trp;
             switch trpselect
                 case 'Auto'
-                % Select `numTRPs' closest to UTs(1).
-                d = zeros(length(TRPs),1);
-                for TRPIndex = 1:length(TRPs)
-                
-                UTBearing = UTs(1).ArrayPosition(1:2) - TRPs(TRPIndex).ArrayPosition(1:2);
-                
-                UTBearing = UTBearing/norm(UTBearing);
-                
-                TRPBearing = [cos(deg2rad(TRPs(TRPIndex).ArrayBearing + 90)),sin(deg2rad(TRPs(TRPIndex).ArrayBearing + 90))].';
-                
-                UT2TRPBearing = rad2deg(acos(UTBearing'*TRPBearing));     %remove WrapToPlusMinus180 since the output of acos is within the range (0,180).
-                
-                if (UT2TRPBearing <= TRPs(TRPIndex).ArrayBeamWidth/2)
-                    UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
-                    d(TRPIndex) = norm(UTVec);
-                else
-                    UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
-                    d(TRPIndex) = norm(UTVec)+max(obj.max_dim)/2;
-                end
-                end
-                [d,I] = sort(d);
-                if (length(d) >= numTRPs)
-                    TRPs = TRPs(I(1:numTRPs));
-                end
-                
-                case 'Manual'      % trp would be selected based on the distance first and then bearing
-                d = zeros(length(TRPs),1);
-                for TRPIndex = 1:length(TRPs)
-                
-                UTBearing = UTs(1).ArrayPosition(1:2) - TRPs(TRPIndex).ArrayPosition(1:2);
-                
-                UTBearing = UTBearing/norm(UTBearing);
-                
-                TRPBearing = [cos(deg2rad(TRPs(TRPIndex).ArrayBearing + 90)),sin(deg2rad(TRPs(TRPIndex).ArrayBearing + 90))].';
-                
-                UT2TRPBearing = rad2deg(acos(UTBearing'*TRPBearing));     %remove WrapToPlusMinus180 since the output of acos is within the range (0,180).
-                
-                if (UT2TRPBearing <= TRPs(TRPIndex).ArrayBeamWidth/2)
-                    UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
-                    d(TRPIndex) = norm(UTVec);
-                else
-                    UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
-                    d(TRPIndex) = norm(UTVec)+0.1;
-                end
-                end
-                [d,I] = sort(d);
-                if (length(d) >= numTRPs)
-                    TRPs = TRPs(I(1:numTRPs));
-                end     
-                   
+                    % Select `numTRPs' closest to UTs(1).
+                    d = zeros(length(TRPs),1);
+                    for TRPIndex = 1:length(TRPs)
+                        
+                        UTBearing = UTs(1).ArrayPosition(1:2) - TRPs(TRPIndex).ArrayPosition(1:2);
+                        
+                        UTBearing = UTBearing/norm(UTBearing);
+                        
+                        TRPBearing = [cos(deg2rad(TRPs(TRPIndex).ArrayBearing + 90)),sin(deg2rad(TRPs(TRPIndex).ArrayBearing + 90))].';
+                        
+                        UT2TRPBearing = rad2deg(acos(UTBearing'*TRPBearing));     %remove WrapToPlusMinus180 since the output of acos is within the range (0,180).
+                        
+                        if (UT2TRPBearing <= TRPs(TRPIndex).ArrayBeamWidth/2)
+                            UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
+                            d(TRPIndex) = norm(UTVec);
+                        else
+                            UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
+                            d(TRPIndex) = norm(UTVec)+max(obj.max_dim)/2;
+                        end
+                    end
+                    [d,I] = sort(d);
+                    if (length(d) >= numTRPs)
+                        TRPs = TRPs(I(1:numTRPs));
+                    end
                     
-            end 
+                case 'Manual'      % 3 subframes cooresponding to 3 sectors of each gnbs
+                    d = zeros(length(TRPs),1);
+                    for TRPIndex = 1:length(TRPs)
+                        UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
+                        d(TRPIndex) = norm(UTVec);
+                    end
+                    [~,I1] = sort(d);
+                    I=zeros(1,numTRPs);
+                    for ii=1:3
+                        I((1:6)+(ii-1)*6)=I1((0:3:15)+ii);
+                    end
+                    if (length(TRPs) >= numTRPs)
+                        TRPs = TRPs(I(1:numTRPs));
+                    end
+                    
+                    
+            end
         end
         
-        %% WrapToPlusMinus180
+        %% Method to apply the configured channel "1"   
+        function sig_o = apply_ch(obj, sig_i,Trp, UTs)
+      
+            [signalOut,pathGains,sampleTimes] = nrCDLChannel1(sig_i, Trp.Channel);
+
+            d2D = norm(Trp.ArrayPosition(1:2) - UTs.ArrayPosition(1:2));     %7.4.1
+            hBS = Trp.ArrayPosition(3);
+            hUT = UTs.ArrayPosition(3);
+            [PL,sigmaSF] = nrPathloss('InH',Trp.Channel.HasLOSCluster,d2D,hBS,hUT, Trp.Channel.CarrierFrequency);
+            PL = PL + randn(1)*sigmaSF;
+            sig_o = signalOut/sqrt(power(10,PL/10));
+            
+        end
+        
+        %% WrapToPlusMinus180 "2"
         function y = WrapToPlusMinus180(obj, x)
             % Wrap x to [-180,180).
             y = mod(x + 180,2*180) - 180;

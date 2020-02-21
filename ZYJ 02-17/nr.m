@@ -63,7 +63,7 @@ classdef nr < handle
                 obj.MaxDLNumberRB = 110;
                 obj.DLNumberRB = 110;
                 obj.PRSNumberRB = 69;
-                obj.prs_symbols = [3:11];
+                obj.prs_symbols = [3:10];
             elseif nargin == 5
                 u_idx = u;                                             %Zhang: The same as above
                 obj.N_s_sf = obj.N_s_slot*obj.N_slots

@@ -16,12 +16,12 @@ function tc = tc(index)
     t_g.description = 'Default parameters';
     
     % numerology (signal)
-    t_g.nr = nr(2);
+    t_g.nr = nr(2);                                                        %index
     t_g.slotNumber = randi(20,1)-1;
     
     % TRPs setting
-    t_g.env_fix.trpselect='Auto';
-    t_g.env_fix.num_trp=6;                                                 % number of trps used
+    t_g.env_fix.trpselect='Manual';                                        % when tepselect='Auto'  ,num_trp=3,4,5,6
+    t_g.env_fix.num_trp=18;                                                % when tepselect='Manual',num_trp=9,12,15,18
     t_g.env_fix.trp_pos = [...
         10, 30, 50, 70, 90, 110, 10, 30, 50, 70, 90, 110;...
         15, 15, 15, 15, 15,  15, 35, 35, 35, 35, 35,  35;...
@@ -30,11 +30,11 @@ function tc = tc(index)
     t_g.env_fix.max_dim = [120;50;3];                                      % The size of the office
     
     % UE setting
-    t_g.env_fix.ue_pos = 'random';                                          % UEs position mode: 'random' or 'fixed' 
-    t_g.env_fix.ue_nbr = 10;                                                % number of UEs to run
+    t_g.env_fix.ue_pos = 'random';                                         % 'random' or 'fixed' 
+    t_g.env_fix.ue_nbr = 2;                                                % number of UEs to run
     
     % Channel setting
-    t_g.env_fix.ch = 'cdl-d';                                                % channel mode
+    t_g.env_fix.ch = 'los';                                                % channel mode
     
     % decoder setting
     t_g.ue_conf.combiner = 1;                                              %Zero forcing
@@ -45,12 +45,13 @@ function tc = tc(index)
     t_g.ue_conf.corr_method = 'time';
     t_g.ue_conf.interp_fac=1;
     % local server setting 
+    t_g.ls_conf.OTOAselect = 'two';                                        % switch from 'all' 'one' or 'two'
     t_g.ls_conf.method = 'one';
     % data 
-    t_g.sink_conf.save_file = 'false';
-    t_g.sink_conf.debug_store = 'false';
-    t_g.sink_conf.plot_cdl = 'true';
-    t_g.sink_conf.plot_geom = 'true';    
+    t_g.sink_conf.save_file = 'true';                                      % 'true' or 'false'
+    t_g.sink_conf.plot_cdl = 'true';                                       % 'true' or 'false'
+    t_g.sink_conf.plot_geom = 'manual';                                    % 'default' 'manual' or 'false'
+    t_g.sink_conf.plot_cox = 'false';                                      % 'true' or 'false'
     
     for i = 1:length(index)
         
