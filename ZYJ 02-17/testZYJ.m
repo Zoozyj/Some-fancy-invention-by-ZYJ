@@ -33,7 +33,7 @@ ue_o = ue(Con.ue_conf,Con.nr);
 
 for ue_idx = 1:Con.env_fix.ue_nbr
     %ue_idx = 1;
-    fprintf('%d....',ue_idx); %Atlease something can show up during the boring waiting time
+    fprintf('%d \n',ue_idx); %Atlease something can show up during the boring waiting time
     
     Pos_tmp=env_o.setenvironment;
     Pos_tmp.Num=num2str(ue_idx);
@@ -43,7 +43,7 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     ls_o = ls(Con.ls_conf, Pos_tmp.trp, Con.env_fix.max_dim, Con.nr);
     
     % signal generator
-    sig_gnb = gnb_o.gen_sf(Con.slotNumber);    %size 30720X32X6
+    [sig_gnb,~]= gnb_o.gen_sf(Con.slotNumber);    %size 30720X32X6
     
     %extract the ue position
     ue_pos(ue_idx, :) = Pos_tmp.UTs.ArrayPosition';   %assign ue_pos by Pos.UTs.ArrayPosition
@@ -52,10 +52,11 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     clock2=tic;
     sig_ch = zeros(length(sig_gnb(:,1,1)),length(Pos_tmp.trp));     %sig_ch buffer
     for TRPIndex = 1:length(Pos_tmp.trp)
-        sig_ch(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end,TRPIndex) = env_o.apply_ch(sig_gnb(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);
+        sig_ch(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end,TRPIndex) ...
+        = env_o.apply_ch(sig_gnb(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);  %only consider the sample range that is interested
     end
     Time_apply_channel=Time_apply_channel+toc(clock2);           % time elapse to generate the received signal
-    %fprintf('\n Average execution time for apply_ch: %2.2f s \n',Time_apply_channel/length(Pos_tmp.trp));
+    
     % apply noise
     %%%%%%%%%%%%%%X%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%XXX%%%%%%%%%%%%%%%
@@ -83,6 +84,7 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     % save the case info
     Pos{ue_idx}=Pos_tmp;
 end
+fprintf('\n Average execution time for apply_ch: %2.2f s \n',Time_apply_channel/length(Pos_tmp.trp)/Con.env_fix.ue_nbr);
 
 % save tc configuration and result
 Res{1} = Time;

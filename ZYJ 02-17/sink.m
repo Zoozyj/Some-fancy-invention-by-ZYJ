@@ -24,6 +24,10 @@
 % 6. Read the historic measurement data from the file'ResultZYJ.mat' 
 %    >>call the function CaseReader externally
 %
+% 7. Plot the 3D bar for a resource gird
+%    >>call the function CaseReader externally
+%
+%
 %
 %
 %
@@ -213,7 +217,7 @@ classdef sink < handle
           ylabel('y/m');
       end
       
-      %% plot the cross-corelation (not implement)
+      %% plot the cross-corelation (not implement completely)
       function Coxx(obj,corr,fig_num,Marker1,Marker2)
           if (nargin<3)
               figure;
@@ -289,6 +293,23 @@ classdef sink < handle
               end
           end          
       end
-     end
-    
+      
+      %% Draw the resource grid
+      function RBPlot(obj,sig_barplot)
+          t=1:14;
+          colorplate=['r', 'g', 'b', 'c', 'm', 'y', 'k','w'];
+          figure(4)
+          clf(4)
+          for ii=1:6
+              bar3(4:11,abs(squeeze(sig_barplot(:,4:11,ii)))',colorplate(ii));
+              axis equal
+              hold on
+          end
+          h=bar3([1:3 12:14],abs(squeeze(sig_barplot(:,[1:3 12:14],ii)))','w');
+          title('Resource grid');
+          xlabel('Subcarriers');
+          ylabel('Symbol Number');
+      end
+      
+    end
 end

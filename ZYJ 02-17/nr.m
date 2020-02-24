@@ -7,14 +7,14 @@ classdef nr < handle
     
     % Public NR basic constants
     properties (Constant)
-        N_fft = 2048                           % NR Tx basic FFT size    ddddd
+        N_fft = 4096                           % NR Tx basic FFT size 
         N_ofdm = 14                            % Number OFDM symbols in slot
         N_sf = 10                              % Number of subframes in frame
         N_s_slot = nr.N_fft*(nr.N_ofdm+1)      % Samples per slot
-        N_s_cp_ofdm = [160, 144, 144, 144, 144, 144, 144]*(nr.N_fft/2048) % Cyclic prefix per ofdm symbol
+        N_s_cp_ofdm = [160, 144, 144, 144, 144, 144, 144, 160, 144, 144, 144, 144, 144, 144]*(nr.N_fft/2048) % Cyclic prefix per ofdm symbol
     end
     
-    % NR basic constants that not is exposed to simulator - used in this
+    % NR basic constants that not is  exposed to simulator - used in this
     % object/class only
     properties(Constant, Access = private) 
         u_v = 0:4                              % Index for ofdm versions
@@ -60,13 +60,13 @@ classdef nr < handle
                 obj.T_slot = obj.T_slot_v(u_idx);
                 obj.N_slots = obj.N_slots_v(u_idx);
                 obj.T_cp = obj.T_cp_v(u_idx);
-                obj.MaxDLNumberRB = 110;
-                obj.DLNumberRB = 110;
-                obj.PRSNumberRB = 69;
+                obj.MaxDLNumberRB = 275;
+                obj.DLNumberRB = 275;
+                obj.PRSNumberRB = 275;
                 obj.prs_symbols = [3:10];
             elseif nargin == 5
                 u_idx = u;                                             %Zhang: The same as above
-                obj.N_s_sf = obj.N_s_slot*obj.N_slots
+                obj.N_s_sf = obj.N_s_slot*obj.N_slots;
                 obj.Tc = obj.Tc_sc_v(u_idx);
                 obj.Fsamp = obj.Fsamp_v(u_idx);
                 obj.Fsc = obj.Fsc_v(u_idx);

@@ -1,4 +1,4 @@
-function [signalOut,signalOutSymbols] = nrPRS(NPRSid,MaxDLNumberRB,DLNumberRB,PRSNumberRB,slotNumber)   %seems like slotNumber doesn't show up in the code...
+function [signalOut,signalOutSymbols,sig_barplot] = nrPRS(NPRSid,MaxDLNumberRB,DLNumberRB,PRSNumberRB,CPLength,symbolNumberList,slotNumber)   %seems like slotNumber doesn't show up in the code...
 % nrPRS generates positioning reference signals (PRS) to be sent out on
 % antenna port 6. The function implements the following aspects of 
 % TR 36.211:
@@ -27,12 +27,11 @@ end
 % Implement TR 36.211, Sec. 6.10.4.2. Assume NCP, 1 or 2 PBCH antenna
 % ports, and no frequency hoping.
 Ns = power(2,ceil(log2(12*MaxDLNumberRB)));                                %Zhang: Ns<12*MaxDLNumberRB and Ns is 2 to power of an integer. Is MaxDLNumberRB a constant? (110)
-m = 0:2*PRSNumberRB-1;              
-mprim = m + MaxDLNumberRB - PRSNumberRB;
+m = 1:2*PRSNumberRB;             %550X1  dd         
+mprim = m + MaxDLNumberRB - PRSNumberRB;   %550X1 
 signalOut = zeros(Ns,14);
 signalOutSymbols = zeros(14,1);                                            % The first sample position of each symbol
-symbolNumberList = [3,4,5,6,7,8,9,10];    
-%symbolNumberList = [3,5,6,8,9,10,12,13];
+
 nuShift = mod(NPRSid,6); 
 for symbolNumber = symbolNumberList                               
     ell = mod(symbolNumber,7);                                           
@@ -41,6 +40,9 @@ for symbolNumber = symbolNumberList
     r = nrPRBS(slotNumber,symbolNumber,NPRSid,MaxDLNumberRB);           
     signalOut(k+1,symbolNumber+1) = r(mprim);
 end
+
+sig_barplot=signalOut(2001:2018,:);% extract a smallpart for bar3 plot
+
 
 % Prepare for IFFT...
 signalOut = ifftshift(signalOut,1);                      
@@ -51,15 +53,14 @@ signalOut(1,:) = 0;
 % Do IFFT...
 signalOutTmp = ifft(signalOut,[],1);
 % ... and add CP.
-signalOut = [];
-CPLength = [160,144,144,144,144,144,144,160,144,144,144,144,144,144];   
+signalOut = zeros(15*Ns,1); 
 sampleIndex = 0;                                                          
 for symbolIndex = 0:13                                                 
     signalOutSymbols(symbolIndex+1) = sampleIndex+1;
     signalOut(sampleIndex+1:sampleIndex+CPLength(symbolIndex+1)) = signalOutTmp(end-CPLength(symbolIndex+1)+1:end,symbolIndex+1); 
     sampleIndex = sampleIndex + CPLength(symbolIndex+1);
-    signalOut(sampleIndex+1:sampleIndex+2048) = signalOutTmp(:,symbolIndex+1);
-    sampleIndex = sampleIndex + 2048;                                      %zhang: ....
+    signalOut(sampleIndex+1:sampleIndex+Ns) = signalOutTmp(:,symbolIndex+1);
+    sampleIndex = sampleIndex + Ns;                                      %zhang: ....
 end
 
 signalOut = signalOut/sqrt(var(signalOut)*14/length(symbolNumberList));    %zhang: Normalization. seems like the some of the symbols are excluded (14/8)

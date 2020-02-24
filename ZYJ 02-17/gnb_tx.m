@@ -26,20 +26,20 @@ classdef gnb_tx < handle
         end
         
         %% Method to generate one subframe of data
-        function sig = gen_sf(obj, slotNumber)
-            
-            
+        function [sig,sig_barplot] = gen_sf(obj, slotNumber)
+            sig_barplot=zeros(18,14,6);
             % Loop over TRPs
             for TRPIndex = 1:length(obj.trp_conf)
                 
                 % Generate the PRS to be transmitted. Symbols between the fourth and
                 % the eleventh are allocated for PRS transmission.  index: 3-10
-                [signalIn,signalInSymbols] = nrPRS(obj.trp_conf(TRPIndex).CellID,...
-                    obj.nr.MaxDLNumberRB,...
-                    obj.nr.DLNumberRB,...
-                    obj.nr.PRSNumberRB,...
-                    slotNumber);
+                [signalIn,signalInSymbols,sig_barplot_tmp] = nrPRS(obj.trp_conf(TRPIndex).CellID,...
+                    obj.nr.MaxDLNumberRB , obj.nr.DLNumberRB,...
+                    obj.nr.PRSNumberRB , obj.nr.N_s_cp_ofdm,...
+                    obj.nr.prs_symbols , slotNumber);
                 signalInTRPs(:,TRPIndex) = signalIn;
+                
+                sig_barplot(:,:,TRPIndex)=sig_barplot_tmp;
                 
                 % Apply a different precoding codeword per allocated PRS symbol.
                 Ns = length(signalIn);
