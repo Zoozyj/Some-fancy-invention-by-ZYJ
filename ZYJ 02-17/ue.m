@@ -66,24 +66,16 @@ classdef ue < handle
                    corr_test = zeros(Len_corr*interp_fac,num_cells);                  %Buffe for the six corr 
                    for c = 1:num_cells
                         % Correlation per symbol per cell
-                        corr_s = zeros(Len_corr,length(prs_symbols));  %Buffer for corr of each symbol
-                        
-                        for s = prs_symbols+1  
-                           
+                        corr_s = zeros(Len_corr,length(prs_symbols));  %Buffer for corr of each symbol                    
+                        for s = prs_symbols+1                       
                                 corr_s(:,s-prs_symbols(1)) = xcorr(squeeze(sf_t(c, s, :)), squeeze(ref_t(c, s, :)),searchGrid);
-
                         end
                         corr   = mean(corr_s');    %Can be improved 
-                        
                         corr_itp=interp(corr,interp_fac);
                         OTOA(c)    = obj.ToAEstimation(corr_itp,interp_fac,searchGrid,0); 
-                        
-                        %[~,OTOAIntpl(k)]= ToAEstimation(Corr,1); 
                         corr_test(:,c)=abs(corr_itp);                               %dddd   
                    end 
 
-                   
-                   
                   % didn't check this part   
                 case 'Frequency Rx'                                        %That is not the case that we need to concider now 
                     sf_f = nan(num_cells,num_ofdm,num_fft);
@@ -110,44 +102,32 @@ classdef ue < handle
             dr = obj.conf.dr;     %1
             Fs = obj.nr.Fsamp;    % dddd Zhang: not correct
 
-            [maxVal, maxCorrPos] = max(abs(Corr));
-            
-            PAR        = maxVal/mean(abs(Corr));
+            [maxVal, maxCorrPos] = max(abs(Corr)); 
+            PAR        = maxVal/mean(abs(Corr));     %around 20???
             Delay      = [];
             TOA=nan;
-            if PAR > eta  % PRS presented
-                
-                if Ind == 0   
-                    
+            if PAR > eta  % PRS presented 
+                if Ind == 0     
                     % estimate the ToA of the first path
                     aa = 1:1:length(Corr); % ascending vector for indices comparison
                     Normalized_Corr = abs(Corr)./maxVal;
                     bb = find(Normalized_Corr>=eta); % find qualified value (better than threshold)
                     cc = setdiff(aa, bb); % select all values not qualified by threshold
-                    Normalized_Corr(cc) = 0;
-                    
+                    Normalized_Corr(cc) = 0;  
                     [~,firstCorrPos] = findpeaks(Normalized_Corr);
                     CorrFlag = isempty(firstCorrPos);
-                    
                     if CorrFlag == 0
-                        TOA = (firstCorrPos(1)-floor((searchGrid*2)*interp_fac/2))/Fs/interp_fac; % dddddddd -1 here bcs in MATLAB all start from 1   Zhang: Fs here is wrong!
-                        
+                        TOA = (firstCorrPos(1)-floor((searchGrid*2)*interp_fac/2))/Fs/interp_fac; % dddddddd -1 here bcs in MATLAB all start from 1   Zhang: Fs here is wrong!                        
                     else
                         firstCorrPos         = bb;
                         TOA                    = (firstCorrPos(1)-(searchGrid*2)*interp_fac/2)/Fs/interp_fac;
                     end
- 
-                    
-                    
-                    
-                else 
-                    
+                else    
                     % interpolation at found max positions, take care of the indices
                     startPos = max(maxCorrPos-SearchGrid,1); % return 1 in case of negative value
                     endpos = min(maxCorrPos+SearchGrid,length(Corr));
                     tempcorr = Corr(startPos:endpos);
                     CorrIntpl = interp(tempcorr,dr);                       %Zhang: dr=1 and it does not change anything
-                    
                     if obj.conf.doMPS == true
                         [TOAOffset, ~] = MPD(CorrIntpl,obj.conf);
                         TOA = ((startPos-1)*dr+TOAOffset-1)/Fs/dr;
@@ -158,8 +138,7 @@ classdef ue < handle
                         cc = setdiff(aa, bb); % select values not qualified by threshold
                         Normalized_Corr(cc) = 0;
                         [~,firstCorrPos] = findpeaks(Normalized_Corr);
-                        CorrFlag = isempty(firstCorrPos);
-                        
+                        CorrFlag = isempty(firstCorrPos); 
                         if CorrFlag == 0
                             TOA = ((startPos-1)*dr+firstCorrPos(1)-1)/Fs/dr; % -1 here bcs in MATLAB all start from 1
                         else
@@ -167,13 +146,10 @@ classdef ue < handle
                             TOA = ((startPos-1)*dr+firstCorrPos(1)-1)/Fs/dr;
                         end
                         %             firstCorrPos  = find(abs(CorrIntpl)./max(abs(CorrIntpl))>=eta2);   % First path detected
-                        %             TOA           = ((startPos-1)*dr+firstCorrPos(1)-1)/Fs/dr;
-                        
-                    end
-                    
+                        %             TOA           = ((startPos-1)*dr+firstCorrPos(1)-1)/Fs/dr; 
+                    end 
                 end              
             end
-          
         end
         
         %% Correlation for all beams and transmission points in vectors

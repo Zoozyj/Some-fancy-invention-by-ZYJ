@@ -1,4 +1,4 @@
-classdef environment < handle
+ classdef environment < handle
     
     properties (Constant)
         c = physconst('LightSpeed'); % ~ Speed of electromagnetic signals in vacuum - m/s
@@ -14,14 +14,15 @@ classdef environment < handle
         num_trp
         nr
         Fsamp
+        len_channel
     end
     
     methods 
         
         %% Environment constructor
-        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp , Fsamp)
+        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp , Fsamp ,len_channel)
             
-            if nargin == 8
+            if nargin == 9
                 obj.trp_pos = trp_pos;
                 obj.trp_bearing = trp_bearing;
                 obj.max_dim = max_dim;
@@ -30,6 +31,7 @@ classdef environment < handle
                 obj.trpselect = trpselect;
                 obj.num_trp = num_trp;
                 obj.Fsamp = Fsamp;
+                obj.len_channel=len_channel;
             else
                 error('Wrong number of arguments for environment creation.');
             end
@@ -65,7 +67,7 @@ classdef environment < handle
                              'UTDirectionOfTravel',[rand(1)*360 - 180;0],...
                              'Mobility',3000/3600);
                  case 'fixed'
-                 UTs = struct('ArrayPosition',[60; 25; 1.5],...
+                 UTs = struct('ArrayPosition',[51.4;21.15; 1.5],...
                              'UTDirectionOfTravel',[rand(1)*360 - 180;0],...
                              'Mobility',3000/3600);
                  otherwise
@@ -103,7 +105,7 @@ classdef environment < handle
                         30e9*Mobility/physconst('lightspeed'),...
                         UTDirectionOfTravel,...
                         obj.Fsamp,...                      %dddddddd???
-                        30720,...                                          
+                        obj.len_channel,...                                          
                         norm(UTPosition-TRPPositions(:,positionIndex))/physconst('lightspeed'),...   % First Path Delay
                         (UTPosition-TRPPositions(:,positionIndex))/norm(UTPosition-TRPPositions(:,positionIndex)));  % TRP2UTDir 3X1 matrix
                     
@@ -248,7 +250,7 @@ classdef environment < handle
         %% Method to apply the configured channel "1"   
         function sig_o = apply_ch(obj, sig_i,Trp, UTs)
       
-            [signalOut,pathGains,sampleTimes] = nrCDLChannel1(sig_i, Trp.Channel);
+            [signalOut,pathGains,sampleTimes] = nrCDLChannel2(sig_i, Trp.Channel);
 
             d2D = norm(Trp.ArrayPosition(1:2) - UTs.ArrayPosition(1:2));     %7.4.1
             hBS = Trp.ArrayPosition(3);

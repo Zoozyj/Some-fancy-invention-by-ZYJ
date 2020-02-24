@@ -26,13 +26,14 @@ Pos=cell(Con.env_fix.ue_nbr,1);
 % constructor for Environment and Ue
 env_o = environment(Con.env_fix.trp_pos , Con.env_fix.trp_bearing,...
     Con.env_fix.max_dim , Con.env_fix.ch, Con.env_fix.ue_pos,...
-    Con.env_fix.trpselect , Con.env_fix.num_trp , Con.nr.Fsamp);
+    Con.env_fix.trpselect , Con.env_fix.num_trp , Con.nr.Fsamp ,...
+    Con.env_fix.Sig_int_end-Con.env_fix.Sig_int_star+1);
 ue_o = ue(Con.ue_conf,Con.nr);
 
 
 for ue_idx = 1:Con.env_fix.ue_nbr
     %ue_idx = 1;
-    fprintf('%d\n',ue_idx); %Atlease something can show up during the boring waiting time
+    fprintf('%d....',ue_idx); %Atlease something can show up during the boring waiting time
     
     Pos_tmp=env_o.setenvironment;
     Pos_tmp.Num=num2str(ue_idx);
@@ -49,12 +50,12 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     
     % Create channel at UE location
     clock2=tic;
-    sig_ch = nan(length(sig_gnb(:,1,1)),length(Pos_tmp.trp));     %sig_ch buffer
+    sig_ch = zeros(length(sig_gnb(:,1,1)),length(Pos_tmp.trp));     %sig_ch buffer
     for TRPIndex = 1:length(Pos_tmp.trp)
-        sig_ch(:,TRPIndex) = env_o.apply_ch(sig_gnb(:, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);
+        sig_ch(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end,TRPIndex) = env_o.apply_ch(sig_gnb(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);
     end
     Time_apply_channel=Time_apply_channel+toc(clock2);           % time elapse to generate the received signal
-    
+    %fprintf('\n Average execution time for apply_ch: %2.2f s \n',Time_apply_channel/length(Pos_tmp.trp));
     % apply noise
     %%%%%%%%%%%%%%X%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%XXX%%%%%%%%%%%%%%%
@@ -89,25 +90,18 @@ Res{2} = Con;
 Res{3} = Pos;
 Res{4} = OTOA;
 Res{5} = sqrt((est_coord(:,1)-ue_pos(:,1)).^2+(est_coord(:,2)-ue_pos(:,2)).^2);
-Res{6} = mean(Res{5});
-Res{7} = [];       % put some comment
+Res{6} = corr_test;
+Res{7} = [];       % leave some comment in here
 Time_total=toc(clock1);
 
 %% result analyse
 %Constructor
+Conf1= tc(1);          % t,t_conf stores all the unchanged configuration
+Con=Conf1{1};
 sink_o = sink(Con.sink_conf.save_file , Con.sink_conf.plot_cdl ,...
               Con.sink_conf.plot_geom , Con.sink_conf.plot_cox);
 
 Res=sink_o.analyze_result(Res);
-
-%% Read the hitoric measurement
-reader_o = sink(0,0,0,0);
-Res_rr=reader_o.CaseReader;
-          
-sink_o = sink(Con.sink_conf.save_file , Con.sink_conf.plot_cdl ,...
-              Con.sink_conf.plot_geom , Con.sink_conf.plot_cox);
-
-Res_rr=sink_o.analyze_result(Res_rr);
 
 
 

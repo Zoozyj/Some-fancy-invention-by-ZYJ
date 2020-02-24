@@ -27,20 +27,20 @@ classdef gnb_tx < handle
         
         %% Method to generate one subframe of data
         function sig = gen_sf(obj, slotNumber)
-
+            
             
             % Loop over TRPs
-            for TRPIndex = 1:length(obj.trp_conf)    
+            for TRPIndex = 1:length(obj.trp_conf)
                 
                 % Generate the PRS to be transmitted. Symbols between the fourth and
                 % the eleventh are allocated for PRS transmission.  index: 3-10
                 [signalIn,signalInSymbols] = nrPRS(obj.trp_conf(TRPIndex).CellID,...
-                                                   obj.nr.MaxDLNumberRB,...
-                                                   obj.nr.DLNumberRB,...
-                                                   obj.nr.PRSNumberRB,...
-                                                   slotNumber);
+                    obj.nr.MaxDLNumberRB,...
+                    obj.nr.DLNumberRB,...
+                    obj.nr.PRSNumberRB,...
+                    slotNumber);
                 signalInTRPs(:,TRPIndex) = signalIn;
-           
+                
                 % Apply a different precoding codeword per allocated PRS symbol.
                 Ns = length(signalIn);
                 Nt = length(obj.trp_conf(TRPIndex).ArrayCodebook(:,1));
@@ -55,11 +55,11 @@ classdef gnb_tx < handle
                     codewordIndex = mod(symbolIndex - 3,8);
                     
                     signalInPrecoded(symbolStart + 1:symbolEnd + 1,:) = signalIn(symbolStart + 1:symbolEnd + 1)...
-                                                                        * obj.trp_conf(TRPIndex).ArrayCodebook(:,codewordIndex + 1).';  
+                        * obj.trp_conf(TRPIndex).ArrayCodebook(:,codewordIndex + 1).';
                 end
-                sig(:,:,TRPIndex) = signalInPrecoded; 
+                sig(:,:,TRPIndex) = signalInPrecoded;
             end
         end
-            
+        
     end
 end

@@ -50,12 +50,11 @@ classdef sink < handle
       end   
       %% All in one
       function Res=analyze_result(obj,Res)
-          figure(1)
-          figure(2)
           % 1.save file
           switch obj.save_file
               case 'true'
                   Res=obj.saveRes(Res);
+                  
               case 'false'
               otherwise
                   warning('save_file >>>> Unexpected input arguement.')
@@ -63,7 +62,7 @@ classdef sink < handle
           % 2. plot cdl
           switch obj.plot_cdl
               case 'true'
-                  obj.plotaCDF(Res{5});
+                  obj.plotaCDF(Res{5},1);
               case 'false'
               otherwise
                   warning('plot_cdl >>>> Unexpected input arguement.')
@@ -71,27 +70,41 @@ classdef sink < handle
           % 3. plot room and check Off
           switch obj.plot_geom
               case 'default'
-                  obj.plotRoom(Res{3}{end}.trp , Res{3}{end}.UTs , 1.2 , 2);
+                  Pos=Res{3};Pos=Res{3};
+                  obj.plotRoom(Pos{end}.trp ,Pos{end}.UTs , 1.2 , 2);
                   title(['The geometry of the indoor office, the last case, ', Res{2}.env_fix.ch]);
-                  obj.Off(Res{3}{end},Res{4}(end,:));
+                  FirstPathDelay=obj.Off(Res{3}{end},Res{4}(end,:));
               case 'manual'
                   sim_num_range=length(Res{3});
                   Sim_num=input(['Choose one case: (1~' , num2str(sim_num_range) , ') \n ']);
                   obj.plotRoom(Res{3}{Sim_num}.trp , Res{3}{Sim_num}.UTs , 1.2 , 2);
                   title(['The geometry of the indoor office, case' ,num2str(sim_num_range),', ', Res{2}.env_fix.ch]);
-                  obj.Off(Res{3}{Sim_num},Res{4}(Sim_num,:));
-              case 'false'
-                  
+                  FirstPathDelay=obj.Off(Res{3}{Sim_num},Res{4}(Sim_num,:));
+              case 'false'   
               otherwise
                   warning('plot_geom >>>> Unexpected input arguement.')
           end
+          
           % 4. check coxx (not implemented yet)
+             switch obj.plot_cox
+              case 'true'
+         
+                  Marker1=Res{4}(end,1:6) * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
+                  Marker2=FirstPathDelay(1:6) * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
+                  Marker2=round(Marker2);
+                  Coxx(obj,Res{6},3,Marker1,Marker2);
+                  
+              case 'false'
+              otherwise
+                  warning('plot_cox >>>> Unexpected input arguement.')
+          end
+          
        
       end
       %% Store the measurement into one file call 'ResultZYJ.mat'
       function Res=saveRes(obj,Res)
           
-          SaveData=input('Do you want to save these measurement? (Yes:1, No:0)\n');
+          SaveData=input('Do you want to save the measurement? (Yes:1, No:0)\n');
           if SaveData == 1
               % leave some comment in the Res{7}
               Res{7} = input('leave some comment to this measurement: \n','s');
@@ -136,10 +149,12 @@ classdef sink < handle
       %% plot the cdf of the measurement
       function plotaCDF(obj,error,fig_num)
           if (nargin < 3)
-              fig_num=1;
+              figure;
+              clf
+          else
+              figure(fig_num);
+              clf(fig_num);
           end
-          clf(fig_num)
-          figure(fig_num);
           hold on;
           grid on;
           cdfplot(error);
@@ -150,17 +165,19 @@ classdef sink < handle
       end
       
       %% plot the geometry of the room with UEs and TRPs
-      function fig = plotRoom(obj,TRPs,UTs,lineWidth,fig_num)
+      function plotRoom(obj,TRPs,UTs,lineWidth,fig_num)
           if (nargin < 4)
               lineWidth = 1.2;
           end
           if (nargin < 5)
-              fig = figure;
+              figure;
+              clf;
+              hold on;
           else
               figure(fig_num);
+              clf(fig_num);
               hold on;
           end
-          clf(fig_num);
           R = 3;
           hold on;
           line([0 120 120 0 0],[0 0 50 50 0]);                           %sketch the wall of the office
@@ -197,16 +214,63 @@ classdef sink < handle
       end
       
       %% plot the cross-corelation (not implement)
-      function Coxx()
-          %%
-          %
-          %
+      function Coxx(obj,corr,fig_num,Marker1,Marker2)
+          if (nargin<3)
+              figure;
+              clf;
+          else
+              figure(fig_num);
+              clf(fig_num);
+          end
+          if (nargin<4)
+              Marker1=0;
+          end
+          if (nargin<5)
+              Marker2=0;
+          end
+          [len_x,num_subfig]=size(corr);
+          if num_subfig>6
+              corr=corr(:,1:6); % if the input is larger than the size n X 6, then just take the first 6 of them.
+          end
+          legend()
+          for subfig_idx=1:6
+              subplot(3,2,subfig_idx);
+              plot(1:len_x , corr(:,subfig_idx) , 'b');
+              axis tight
+              hold on;
+              if Marker1(1)~=0
+                  if (Marker1(subfig_idx)<=len_x && Marker1(subfig_idx)>=1)
+                      p1=plot(Marker1(subfig_idx),corr(Marker1(subfig_idx),subfig_idx),'^','MarkerSize',5,'MarkerEdgeColor','r','MarkerFaceColor','r');
+                      M1=1;
+                  else
+                      M1=0;
+                  end
+              end
+              if Marker2(1)~=0
+                  if (Marker2(subfig_idx)<=len_x && Marker2(subfig_idx)>=1)
+                      p2=plot(Marker2(subfig_idx),corr(Marker2(subfig_idx),subfig_idx),'o','MarkerSize',5,'MarkerEdgeColor','g','MarkerFaceColor','g');
+                              M2=1;
+                  else
+                      M2=0;
+                  end
+              end
+              if (subfig_idx==1 && M1==1 && M2==1 )
+                  legend([p1 p2],{'Measure','Real'});
+                 legend('boxoff');
+              end
+          
+              grid on;
+              xlabel('Sample');
+              axis([1 len_x 0 max(corr(:,subfig_idx)*1.1)]);
+              title(['Corr of Trp' num2str(subfig_idx)]);
+          end
+        
       end
-       
+  
       %% The ratio between OTOA and the FirstPathDelay (descibe how many precentage off from measurement to the expected)
-      function Off(obj,Pos,OTOA)
+      function  FirstPathDelay=Off(obj,Pos,OTOA)
           FirstPathDelay=nan(1,length(OTOA(end,:)));
-          for ii=1:length(OTOA(end,:))
+          for ii=1:length(OTOA(end,:)) 
               FirstPathDelay(ii)=Pos.trp(ii).Channel.FirstPathDelay;
           end
           disp(['Off  = ' , num2str(OTOA(end,:)./FirstPathDelay) ]);
