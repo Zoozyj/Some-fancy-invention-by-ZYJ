@@ -19,19 +19,19 @@ Res = cell(1,7);      % Time, configuration, OTOA, corr_test, (x,y,z)matrix, Err
 % Iteration
 % iteration for each Pos
 % Buffer for ue_pos and est_pos
-ue_pos=nan(Con.env_fix.ue_nbr,3);
-est_coord=nan(Con.env_fix.ue_nbr,3);
-OTOA=nan(Con.env_fix.ue_nbr,Con.env_fix.num_trp);
-Pos=cell(Con.env_fix.ue_nbr,1);
+ue_pos=nan(Con.env.ue_nbr,3);
+est_coord=nan(Con.env.ue_nbr,3);
+OTOA=nan(Con.env.ue_nbr,Con.env.num_trp);
+Pos=cell(Con.env.ue_nbr,1);
 % constructor for Environment and Ue
-env_o = environment(Con.env_fix.trp_pos , Con.env_fix.trp_bearing,...
-    Con.env_fix.max_dim , Con.env_fix.ch, Con.env_fix.ue_pos,...
-    Con.env_fix.trpselect , Con.env_fix.num_trp , Con.nr.Fsamp ,...
-    Con.env_fix.Sig_int_end-Con.env_fix.Sig_int_star+1);
+env_o = environment(Con.env.trp_pos , Con.env.trp_bearing,...
+    Con.env.max_dim , Con.env.ch , Con.env.ue_pos,...
+    Con.env.trpselect , Con.env.num_trp , Con.nr ,...
+    Con.env.Sig_int_end-Con.env.Sig_int_star+1);
 ue_o = ue(Con.ue_conf,Con.nr);
 
 
-for ue_idx = 1:Con.env_fix.ue_nbr
+for ue_idx = 1:Con.env.ue_nbr
     %ue_idx = 1;
     fprintf('%d \n',ue_idx); %Atlease something can show up during the boring waiting time
     
@@ -40,7 +40,7 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     
     % constructor for gnb ue ls object
     gnb_o = gnb_tx(Pos_tmp.trp, Con.nr);
-    ls_o = ls(Con.ls_conf, Pos_tmp.trp, Con.env_fix.max_dim, Con.nr);
+    ls_o = ls(Con.ls_conf, Pos_tmp.trp, Con.env.max_dim, Con.nr);
     
     % signal generator
     [sig_gnb,~]= gnb_o.gen_sf(Con.slotNumber);    %size 30720X32X6
@@ -52,23 +52,10 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     clock2=tic;
     sig_ch = zeros(length(sig_gnb(:,1,1)),length(Pos_tmp.trp));     %sig_ch buffer
     for TRPIndex = 1:length(Pos_tmp.trp)
-        sig_ch(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end,TRPIndex) ...
-        = env_o.apply_ch(sig_gnb(Con.env_fix.Sig_int_star:Con.env_fix.Sig_int_end, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);  %only consider the sample range that is interested
+        sig_ch(Con.env.Sig_int_star:Con.env.Sig_int_end,TRPIndex) ...
+        = env_o.apply_ch(sig_gnb(Con.env.Sig_int_star:Con.env.Sig_int_end, :, TRPIndex) , Pos_tmp.trp(TRPIndex) , Pos_tmp.UTs);  %only consider the sample range that is interested
     end
     Time_apply_channel=Time_apply_channel+toc(clock2);           % time elapse to generate the received signal
-    
-    % apply noise
-    %%%%%%%%%%%%%%X%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%XXX%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%XXXXX%%%%%%%%%%%%%%
-    %%%%%%%%%%%XXXXXXX%%%%%%%%%%%%%
-    %%%%%%%%%%XXXXXXXXX%%%%%%%%%%%%
-    %%%%%%%%%XXXXXXXXXXX%%%%%%%%%%%
-    %%%%%%%%%%XXXXXXXXX%%%%%%%%%%%%
-    %%%%%%%%%%%XXXXXXX%%%%%%%%%%%%%
-    %%%%%%%%%%%%XXXXX%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%XXX%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%X%%%%%%%%%%%%%%%%
     
     % only the signal from the first array element is used in this case
     sig_gnb_one = squeeze(sig_gnb(:,1,:));
@@ -84,7 +71,7 @@ for ue_idx = 1:Con.env_fix.ue_nbr
     % save the case info
     Pos{ue_idx}=Pos_tmp;
 end
-fprintf('\n Average execution time for apply_ch: %2.2f s \n',Time_apply_channel/length(Pos_tmp.trp)/Con.env_fix.ue_nbr);
+fprintf('\n Average execution time for apply_ch: %2.2f s \n',Time_apply_channel/length(Pos_tmp.trp)/Con.env.ue_nbr);
 
 % save tc configuration and result
 Res{1} = Time;

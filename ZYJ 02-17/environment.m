@@ -13,14 +13,13 @@
         trpselect
         num_trp
         nr
-        Fsamp
         len_channel
     end
     
     methods 
         
         %% Environment constructor
-        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp , Fsamp ,len_channel)
+        function obj = environment(trp_pos, trp_bearing, max_dim, channel, ue_pos , trpselect , num_trp , nr ,len_channel)
             
             if nargin == 9
                 obj.trp_pos = trp_pos;
@@ -30,7 +29,7 @@
                 obj.ue_pos = ue_pos;
                 obj.trpselect = trpselect;
                 obj.num_trp = num_trp;
-                obj.Fsamp = Fsamp;
+                obj.nr = nr;
                 obj.len_channel=len_channel;
             else
                 error('Wrong number of arguments for environment creation.');
@@ -50,6 +49,8 @@
  
             % Select 6 closest TRPs...
             Pos.trp = obj.selectClosestTRPs(Pos.trp , Pos.UTs);
+            
+          
             
             % ...and reassign CellIDs.
             for TRPIndex = 1:length(Pos.trp)
@@ -78,9 +79,6 @@
         
         %% Method to place TRPs in geometry "2"
         function TRPs = dropTRPs(obj, UTDirectionOfTravel, Mobility, UTPosition)
-            TRPPositions=obj.trp_pos;
-            TRPBearings=obj.trp_bearing;
-   
             % Codebook of beams equi-spaced in azimuth when using an array defined by
             % txArrayFR2.Size = [4 8 1 1 1]; % Given as [M N P Mg Ng].
             % txArrayFR2.ElementSpacing = [0.5 0.5 0.0 0.0]; % Given as [dV dH dgV dgH].
@@ -93,21 +91,39 @@
             codebook(4,:,:) = codebookdft/sqrt(8)/sqrt(4);
             codebook = reshape(codebook,4*8,8);
             
+            cdlplate=["cdl-a","cdl-b","cdl-c","cdl-d","cdl-e"];       %{'cdl-a','cdl-b','cdl-c','cdl-d','cdl-e'};       
+            TRPPositions=obj.trp_pos;
+            TRPBearings=obj.trp_bearing;
             % Generate a list of TRPs with the desired positions and bearing angles.
             TRPIndex = 1;
             for positionIndex = 1:size(TRPPositions,2)    % TRPPosition: 3 by 12
+                Distance=norm(UTPosition-TRPPositions(:,positionIndex));   % The distance between UT and TRPs
+                LOSPro=nrProbLOS('inh',Distance);
                 for sectorIndex = 1:length(TRPBearings)
+                    % rewrite the delay profile if the Con.env.ch_mode='pro'
+                    switch obj.channel
+                        case 'Pro'
+                        dice=rand(1);
+                        Pick=(  dice>0  &&  dice<=LOSPro/2  ) * 5  ...
+                            +(  dice>LOSPro/2  &&  dice<=LOSPro  ) * 4  ...
+                            +(  dice>LOSPro  &&  dice<=LOSPro+(1-LOSPro)/3  ) * 3   ...
+                            +(  dice>LOSPro+(1-LOSPro)/3  &&  dice<=LOSPro+(1-LOSPro)*2/3  ) * 2 ...
+                            +(  dice>LOSPro+(1-LOSPro)*2/3  &&  dice<=1) * 1;
+                        channel_tmp=cdlplate{Pick};
+                        otherwise
+                        channel_tmp=obj.channel;
+                    end
 %TransmitAntennaArrayOrientation,DelayProfile,CarrierFrequency,MaximumDopplerShift,UTDirectionOfTravel,SampleRate,NumTimeSamples,FirstPathDelay,TRP2UTDir)
                     channel = getDefaultChannel(obj, ...
-                        [TRPBearings(sectorIndex); 0; 0],...
-                        obj.channel,...      %            'LOS',... obs
-                        30e9,...             % CarrierFrequency
-                        30e9*Mobility/physconst('lightspeed'),...
-                        UTDirectionOfTravel,...
-                        obj.Fsamp,...                      %dddddddd???
-                        obj.len_channel,...                                          
-                        norm(UTPosition-TRPPositions(:,positionIndex))/physconst('lightspeed'),...   % First Path Delay
-                        (UTPosition-TRPPositions(:,positionIndex))/norm(UTPosition-TRPPositions(:,positionIndex)));  % TRP2UTDir 3X1 matrix
+                        [TRPBearings(sectorIndex); 0; 0],...               % in here to control the tilting angle gamma
+                        channel_tmp,...                                    % delay profile
+                        30e9,...                                           % CarrierFrequency
+                        30e9*Mobility/physconst('lightspeed'),...          % Doppler shift
+                        UTDirectionOfTravel,...                            % UT's direction of travel
+                        obj.nr.Fsamp,...                                   % dddddddd???
+                        obj.len_channel,...                                % The size of the siganl interested                                      
+                        Distance/physconst('lightspeed'),...   % First Path Delay
+                        (UTPosition-TRPPositions(:,positionIndex))/Distance);  % TRP2UTDir 3X1 matrix
                     
                     TRPs(TRPIndex) = struct(...
                         'ArrayPosition',TRPPositions(:,positionIndex),...
@@ -229,15 +245,15 @@
                     end
                     
                 case 'Manual'      % 3 subframes cooresponding to 3 sectors of each gnbs
-                    d = zeros(length(TRPs),1);
-                    for TRPIndex = 1:length(TRPs)
+                    Distance = zeros(numTRPs,1);
+                    for TRPIndex = 1:numTRPs
                         UTVec = UTs(1).ArrayPosition - TRPs(TRPIndex).ArrayPosition;
-                        d(TRPIndex) = norm(UTVec);
+                        Distance(TRPIndex) = norm(UTVec);
                     end
-                    [~,I1] = sort(d);
+                    [~,I1] = sort(Distance);
                     I=zeros(1,numTRPs);
                     for ii=1:3
-                        I((1:6)+(ii-1)*6)=I1((0:3:15)+ii);
+                        I((1:numTRPs/3)+(ii-1)*numTRPs/3)=I1((0:3:numTRPs-1)+ii);
                     end
                     if (length(TRPs) >= numTRPs)
                         TRPs = TRPs(I(1:numTRPs));
@@ -249,17 +265,24 @@
         
         %% Method to apply the configured channel "1"   
         function sig_o = apply_ch(obj, sig_i,Trp, UTs)
-      
+            
             [signalOut,pathGains,sampleTimes] = nrCDLChannel2(sig_i, Trp.Channel);
-
-            d2D = norm(Trp.ArrayPosition(1:2) - UTs.ArrayPosition(1:2));     %7.4.1
+            
+            d2D = norm(Trp.ArrayPosition(1:2) - UTs.ArrayPosition(1:2));   %7.4.1
             hBS = Trp.ArrayPosition(3);
             hUT = UTs.ArrayPosition(3);
             [PL,sigmaSF] = nrPathloss('InH',Trp.Channel.HasLOSCluster,d2D,hBS,hUT, Trp.Channel.CarrierFrequency);
             PL = PL + randn(1)*sigmaSF;
-            sig_o = signalOut/sqrt(power(10,PL/10));
+            %Apply noise and Pathloss in the siganl
+            BWn=obj.nr.PRSNumberRB*obj.nr.Fsc*12*1e-8;      % Bandwidth in unit(10^8Hz)
+            SNRdB=24-PL+81.2-10*log10(BWn);
+            SNR=power(10,SNRdB/10);
+            Noise=1/sqrt(2)*(randn(length(signalOut),1)+1j*randn(length(signalOut),1));
+
+            sig_o = signalOut + sqrt( var(signalOut) / SNR ) * Noise;
             
         end
+        
         
         %% WrapToPlusMinus180 "2"
         function y = WrapToPlusMinus180(obj, x)

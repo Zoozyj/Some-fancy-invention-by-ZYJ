@@ -63,9 +63,8 @@ for symbolIndex = 0:13
     sampleIndex = sampleIndex + Ns;                                      %zhang: ....
 end
 
-signalOut = signalOut/sqrt(var(signalOut)*14/length(symbolNumberList));    %zhang: Normalization. seems like the some of the symbols are excluded (14/8)
+signalOut = signalOut/sqrt(var(signalOut)); %*14/length(symbolNumberList));    %zhang: Normalization. seems like the some of the symbols are excluded (14/8)
 
-%var(signalOut)
 %figure; plot(real(signalOut)); axis tight; grid on;
 signalOut = signalOut(:);
 

@@ -35,9 +35,9 @@ classdef ue < handle
         %% Decode PRS - measure TOA sample per "best" beam
         function [OTOA,corr_test] = decode_prs(obj, rx_sig, ref_sig)
             N_ofdm = obj.nr.N_ofdm;
-            N_s_ofdm = 2048; % 
-            N_s_cp_ofdm = [160, 144, 144, 144, 144, 144, 144, 160, 144, 144, 144, 144, 144, 144];%obj.nr.N_s_cp_ofdm;
-            prs_symbols = [3,4,5,6,7,8,9,10];
+            N_s_ofdm = obj.nr.N_fft; % 
+            N_s_cp_ofdm = obj.nr.N_s_cp_ofdm;%obj.nr.N_s_cp_ofdm;
+            prs_symbols = obj.nr.prs_symbols;
             %The search grid is depend on the range of the secnario.
             Len_corr = obj.conf.searchGrid*2+1;
             searchGrid=obj.conf.searchGrid;    % 200   periodicity of the sequence in time domain

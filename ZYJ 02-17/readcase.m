@@ -13,6 +13,9 @@ if exist('ResultZYJ.mat')
     end
 end
 sink_o = sink('false' , 'true' , 'default' , 'true');
+fprintf('\n')
+disp(Res_rr{1});
+fprintf(['  >>' Res_rr{7} '<<\n \n']);
 Res_rr=sink_o.analyze_result(Res_rr);
 end
 

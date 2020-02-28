@@ -76,13 +76,13 @@ classdef sink < handle
               case 'default'
                   Pos=Res{3};Pos=Res{3};
                   obj.plotRoom(Pos{end}.trp ,Pos{end}.UTs , 1.2 , 2);
-                  title(['The geometry of the indoor office, the last case, ', Res{2}.env_fix.ch]);
+                  title(['The geometry of the indoor office, the last case, ', Res{2}.env.ch]);
                   FirstPathDelay=obj.Off(Res{3}{end},Res{4}(end,:));
               case 'manual'
                   sim_num_range=length(Res{3});
                   Sim_num=input(['Choose one case: (1~' , num2str(sim_num_range) , ') \n ']);
                   obj.plotRoom(Res{3}{Sim_num}.trp , Res{3}{Sim_num}.UTs , 1.2 , 2);
-                  title(['The geometry of the indoor office, case' ,num2str(sim_num_range),', ', Res{2}.env_fix.ch]);
+                  title(['The geometry of the indoor office, case' ,num2str(sim_num_range),', ', Res{2}.env.ch]);
                   FirstPathDelay=obj.Off(Res{3}{Sim_num},Res{4}(Sim_num,:));
               case 'false'   
               otherwise
@@ -90,13 +90,23 @@ classdef sink < handle
           end
           
           % 4. check coxx (not implemented yet)
-             switch obj.plot_cox
+          switch obj.plot_cox
               case 'true'
-         
-                  Marker1=Res{4}(end,1:6) * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
-                  Marker2=FirstPathDelay(1:6) * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
-                  Marker2=round(Marker2);
-                  Coxx(obj,Res{6},3,Marker1,Marker2);
+                  Num_trp=length(Res{3}{end}.trp);
+                  for ii=1:Num_trp/6
+                      corr=Res{6}(:,6*ii-5:6*ii);
+                      
+                      Marker1=Res{4}(end,6*ii-5:6*ii)     * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
+                      Marker2=FirstPathDelay(6*ii-5:6*ii) * Res{2}.ue_conf.interp_fac * Res{2}.nr.Fsamp + floor((Res{2}.ue_conf.searchGrid *2)*Res{2}.ue_conf.interp_fac/2);
+                      Marker2=round(Marker2);
+                      
+                      cdlOfeach=cell(1,6);
+                      for jj=1:6
+                          cdlOfeach{jj}=Res{3}{end}.trp(6*(ii-1)+jj).Channel.DelayProfile;
+                      end
+                      
+                      Coxx(obj,corr,2+ii,Marker1,Marker2,cdlOfeach);
+                  end
                   
               case 'false'
               otherwise
@@ -218,7 +228,7 @@ classdef sink < handle
       end
       
       %% plot the cross-corelation (not implement completely)
-      function Coxx(obj,corr,fig_num,Marker1,Marker2)
+      function Coxx(obj,corr,fig_num,Marker1,Marker2,cdlOfeach)
           if (nargin<3)
               figure;
               clf;
@@ -232,6 +242,10 @@ classdef sink < handle
           if (nargin<5)
               Marker2=0;
           end
+           if (nargin<6)
+              cdlOfeach=0;
+           end
+          
           [len_x,num_subfig]=size(corr);
           if num_subfig>6
               corr=corr(:,1:6); % if the input is larger than the size n X 6, then just take the first 6 of them.
@@ -266,7 +280,9 @@ classdef sink < handle
               grid on;
               xlabel('Sample');
               axis([1 len_x 0 max(corr(:,subfig_idx)*1.1)]);
-              title(['Corr of Trp' num2str(subfig_idx)]);
+              if length(cdlOfeach)>0 && length(cdlOfeach)<7
+                title(['Corr of Trp' num2str(subfig_idx+(fig_num-3)*6) ',' cdlOfeach{subfig_idx}]);
+              end
           end
         
       end
@@ -277,7 +293,10 @@ classdef sink < handle
           for ii=1:length(OTOA(end,:)) 
               FirstPathDelay(ii)=Pos.trp(ii).Channel.FirstPathDelay;
           end
-          disp(['Off  = ' , num2str(OTOA(end,:)./FirstPathDelay) ]);
+          Off=OTOA(end,:)./FirstPathDelay;
+          for ii=1:length(OTOA(end,:))/6
+            fprintf(['Off(', num2str(ii*6-5), '~', num2str(ii*6), ') = ', num2str(Off(ii*6-5:ii*6)), '\n' ]);
+          end
       end
       
       %% case Reader
